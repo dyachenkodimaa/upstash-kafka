@@ -1,14 +1,17 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "worker"
 main = "src/index.ts"
+workers_dev = true
 compatibility_date = "2024-04-05"
 compatibility_flags = ["nodejs_compat"]
 
 # Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
 # Note: Use secrets to store sensitive data.
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-# [vars]
-# MY_VARIABLE = "production_value"
+[vars]
+UPSTASH_KAFKA_REST_URL = "https://cosmic-albacore-13178-eu2-kafka.upstash.io:9092"
+UPSTASH_KAFKA_REST_USERNAME = "Y29zbWljLWFsYmFjb3JlLTEzMTc4JKb_BOjz1TKfnPu8riiCMqUEOLxzfDmrGOc"
+UPSTASH_KAFKA_REST_PASSWORD = "NmVhYmViNzgtYjc2Yi00MWQyLWEwNzQtYWVlNWQyY2IwNDVl"
 
 # Bind the Workers AI model catalog. Run machine learning models, powered by serverless GPUs, on Cloudflare’s global network
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#workers-ai

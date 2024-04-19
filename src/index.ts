@@ -1,32 +1,45 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
+import { Kafka } from "@upstash/kafka";
+import { Buffer } from 'node:buffer';
 
 export interface Env {
-	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
-	// MY_KV_NAMESPACE: KVNamespace;
-	//
-	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
-	// MY_DURABLE_OBJECT: DurableObjectNamespace;
-	//
-	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
-	// MY_BUCKET: R2Bucket;
-	//
-	// Example binding to a Service. Learn more at https://developers.cloudflare.com/workers/runtime-apis/service-bindings/
-	// MY_SERVICE: Fetcher;
-	//
-	// Example binding to a Queue. Learn more at https://developers.cloudflare.com/queues/javascript-apis/
-	// MY_QUEUE: Queue;
+	UPSTASH_KAFKA_REST_URL: string;
+	UPSTASH_KAFKA_REST_USERNAME: string;
+	UPSTASH_KAFKA_REST_PASSWORD: string;
 }
 
 export default {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		return new Response('Hello World!');
+	async fetch(
+		request: Request,
+		env: Env,
+		ctx: ExecutionContext
+	): Promise<Response> {
+		const buf = Buffer.from(`${Date.now()}`, 'utf8');
+
+		const key =buf.toString('hex');
+
+		let message = {
+			country: request.cf?.country,
+			city: request.cf?.city,
+			region: request.cf?.region,
+			url: request.url,
+			ip: request.headers.get("x-real-ip"),
+			mobile: request.headers.get("sec-ch-ua-mobile"),
+			platform: request.headers.get("sec-ch-ua-platform"),
+			useragent: request.headers.get("user-agent"),
+		};
+
+		const kafka = new Kafka({
+			url: env.UPSTASH_KAFKA_REST_URL,
+			username: env.UPSTASH_KAFKA_REST_USERNAME,
+			password: env.UPSTASH_KAFKA_REST_PASSWORD,
+		});
+
+		const p = kafka.producer();
+
+		const topic = "external.landing.command.push-log.1";
+
+		ctx.waitUntil(p.produce(topic, JSON.stringify(message), {key: key}));
+
+		return new Response(null);
 	},
 };
