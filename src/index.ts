@@ -7,25 +7,28 @@ export interface Env {
 	UPSTASH_KAFKA_REST_PASSWORD: string;
 }
 
+export const CORS_HEADERS: HeadersInit = {
+	"Access-Control-Allow-Origin": "*",
+	"Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
+	"Access-Control-Max-Age": "86400",
+};
+
 export default {
 	async fetch(
 		request: Request,
 		env: Env,
 		ctx: ExecutionContext
 	): Promise<Response> {
+		const log = await request.json() as object
 		const buf = Buffer.from(`${Date.now()}`, 'utf8');
-
 		const key =buf.toString('hex');
 
 		let message = {
 			country: request.cf?.country,
 			city: request.cf?.city,
-			region: request.cf?.region,
 			url: request.url,
 			ip: request.headers.get("x-real-ip"),
-			mobile: request.headers.get("sec-ch-ua-mobile"),
-			platform: request.headers.get("sec-ch-ua-platform"),
-			useragent: request.headers.get("user-agent"),
+			...log
 		};
 
 		const kafka = new Kafka({
@@ -40,6 +43,19 @@ export default {
 
 		ctx.waitUntil(p.produce(topic, JSON.stringify(message), {key: key}));
 
-		return new Response(null);
+		const headers = getResponseHeaders(request)
+		return new Response(null, {headers: {
+			...headers
+			}});
 	},
 };
+
+export function getResponseHeaders(request: Request): HeadersInit {
+	const accessControlValue = request.headers.get(
+		"Access-Control-Request-Headers"
+	) as string;
+	return {
+		...CORS_HEADERS,
+		"Access-Control-Allow-Headers": accessControlValue,
+	};
+}
